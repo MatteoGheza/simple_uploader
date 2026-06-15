@@ -83,7 +83,10 @@ export class GoogleDriveStore extends DataStore {
     }
 
     const creationPromise = (async () => {
-      const query = `name = '${folderName}' and '${this.folderId}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`;
+      const query = `name = '${folderName}' and ` +
+        `'${this.folderId}' in parents and ` +
+        `mimeType = 'application/vnd.` +
+        `google-apps.folder' and trashed = false`;
 
       const response = await this.drive.files.list({
         q: query,
@@ -113,11 +116,7 @@ export class GoogleDriveStore extends DataStore {
       promise: creationPromise,
       lastActivity: Date.now()
     });
-
-    creationPromise.catch(() => {
-      this.folderPromises.delete(folderName);
-    });
-
+    creationPromise.catch(() => this.folderPromises.delete(folderName));
     return creationPromise;
   }
 
@@ -130,11 +129,24 @@ export class GoogleDriveStore extends DataStore {
 
     const targetFolderId = await this.getOrCreateUserFolder(userName, sessionId);
 
+    // eslint-disable-next-line no-console
+    console.log(`[GDriveStore] [${upload.id}] Initiating: ` +
+      `${fileName}`);
+    // eslint-disable-next-line no-console
+    console.debug(`[GDriveStore] [${upload.id}] ` +
+      `Size: ${fileSize} to folder: ${targetFolderId}`);
+
+    /*
+     * Initiate Resumable Upload on GDrive
+     * Ref: https://developers.google.com/drive/api/v3/manage-uploads#resumable
+     * For Shared Drives (Team Drives), supportsAllDrives=true is MANDATORY.
+     */
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const auth = this.drive.context._options.auth as any;
     const authClient = await auth.getAccessToken();
     const response = await fetch(
-      `https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable&supportsAllDrives=true`,
+      `https://www.googleapis.com/upload/drive/v3/files?` +
+      `uploadType=resumable&supportsAllDrives=true`,
       {
         method: 'POST',
         headers: {
@@ -143,26 +155,22 @@ export class GoogleDriveStore extends DataStore {
           'X-Upload-Content-Type': mimeType,
           'X-Upload-Content-Length': fileSize.toString()
         },
-        body: JSON.stringify({
-          name: fileName,
-          parents: [targetFolderId]
-        })
+        body: JSON.stringify({ name: fileName, parents: [targetFolderId] })
       }
     );
 
     if (!response.ok) {
       const errorText = await response.text();
-      throw new Error(`Failed to initiate GDrive upload: ${response.statusText} - ${errorText}`);
+      // eslint-disable-next-line no-console
+      console.error(`[GDriveStore] [${upload.id}] Init failed:`, response.status, errorText);
+      throw new Error(`Failed to initiate: ${response.statusText}`);
     }
 
     const sessionUri = response.headers.get('location');
-    if (!sessionUri) {
-      throw new Error('GDrive did not return a session URI');
-    }
+    if (!sessionUri) throw new Error('GDrive did not return session URI');
 
     const newUpload = upload;
     newUpload.offset = 0;
-
     this.sessions.set(upload.id, {
       upload: newUpload,
       sessionUri,
@@ -174,9 +182,7 @@ export class GoogleDriveStore extends DataStore {
 
   async write(readable: Readable, id: string, offset: number): Promise<number> {
     const session = this.sessions.get(id);
-    if (!session) {
-      throw new Error('Upload session not found');
-    }
+    if (!session) throw new Error('Upload session not found');
     session.lastActivity = Date.now();
 
     let bytesRead = 0;
@@ -184,13 +190,10 @@ export class GoogleDriveStore extends DataStore {
 
     for await (const chunk of readable) {
       bytesRead += chunk.length;
-
-      // Memory protection: fail if the chunk exceeds the safety limit
       if (bytesRead > MAX_CHUNK_BUFFER_SIZE) {
         this.sessions.delete(id);
-        throw new Error('Chunk size exceeds maximum allowed memory buffer');
+        throw new Error('Chunk size limit exceeded');
       }
-
       chunks.push(chunk);
     }
 
@@ -200,19 +203,27 @@ export class GoogleDriveStore extends DataStore {
     const end = offset + bytesRead - 1;
     const uploadSession = session.upload as Upload;
 
+    /*
+     * Capture the data to determine the length of this chunk
+     * GDrive Resumable Upload requires knowing the Content-Length of the chunk
+     * or we can stream if we use the correct headers, but GDrive PUT expects a specific range.
+     */
+
+    // eslint-disable-next-line no-console
+    console.debug(`[GDriveStore] [${id}] Writing ${bytesRead} bytes at ` +
+      `offset ${uploadSession.offset} (Total size: ${uploadSession.size})`);
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const auth = this.drive.context._options.auth as any;
     const authClient = await auth.getAccessToken();
-
-    const sessionUri = session.sessionUri.includes('?')
-      ? `${session.sessionUri}&supportsAllDrives=true`
-      : `${session.sessionUri}?supportsAllDrives=true`;
+    const sessionUri = `${session.sessionUri}` +
+      `${session.sessionUri.includes('?') ? '&' : '?'}supportsAllDrives=true`;
 
     const response = await fetch(sessionUri, {
       method: 'PUT',
       headers: {
         Authorization: `Bearer ${authClient.token}`,
-        'Content-Range': `bytes ${offset}-${end}/${uploadSession.size}`,
+        'Content-Range': `bytes ${uploadSession.offset}-${end}/${uploadSession.size}`,
         'Content-Length': bytesRead.toString()
       },
       body: buffer
@@ -220,19 +231,23 @@ export class GoogleDriveStore extends DataStore {
 
     if (response.status !== GDRIVE_RESUMABLE_INCOMPLETE && !response.ok) {
       const errorText = await response.text();
+      // eslint-disable-next-line no-console
+      console.error(`[GDriveStore] [${id}] Write failed:`, response.status, errorText);
       this.sessions.delete(id);
-      throw new Error(`Failed to upload chunk to GDrive: ${response.statusText} - ${errorText}`);
+      throw new Error(`Write failed: ${response.statusText} - ${errorText}`);
     }
 
     uploadSession.offset += bytesRead;
-    return bytesRead;
+    // eslint-disable-next-line no-console
+    console.debug(`[GDriveStore] [${id}] Chunk success. New offset: ${uploadSession.offset}`);
+
+    // Return the new offset as required by Tus DataStore
+    return uploadSession.offset;
   }
 
   async getUpload(id: string): Promise<Upload> {
     const session = this.sessions.get(id);
-    if (!session) {
-      throw new Error('Upload not found');
-    }
+    if (!session) throw new Error('Upload not found');
     session.lastActivity = Date.now();
     return session.upload as Upload;
   }
