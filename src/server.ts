@@ -66,7 +66,7 @@ app.use(helmet({
         'https://releases.transloadit.com'
       ],
       'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
-      'img-src': ["'self'", 'data:', 'blob:']
+      'img-src': ["'self'", 'data:', 'blob:', '/static/']
     }
   }
 }));
@@ -135,6 +135,8 @@ app.use(limiter);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
+app.use('/static', express.static(path.join(__dirname, '../static')));
+app.use('/favicon.ico', express.static(path.join(__dirname, '../static/favicon.ico')));
 
 // LiquidJS Setup
 const engine = new Liquid();
