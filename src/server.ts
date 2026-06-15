@@ -66,7 +66,7 @@ app.use(helmet({
         'https://releases.transloadit.com'
       ],
       'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
-      'img-src': ["'self'", 'data:', 'blob:', '/static/']
+      'img-src': ["'self'", 'data:', 'blob:']
     }
   }
 }));
