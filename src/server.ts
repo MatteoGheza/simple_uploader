@@ -85,6 +85,8 @@ interface TurnstileOutcome {
   'error-codes': string[];
 }
 
+logger.info(`Turnstile is ${process.env.DISABLE_TURNSTILE === 'true' ? 'disabled' : 'enabled'}`);
+
 // Tus Server
 const tusServer = new Server({
   path: '/upload',
