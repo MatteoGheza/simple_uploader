@@ -75,6 +75,18 @@
             .uppy-Dashboard-inner { height: 350px !important; }
         }
         .uppy-Dashboard-AddFiles { cursor: pointer; }
+        #retry-container {
+            margin-top: 15px;
+            display: none;
+        }
+        #retry-button {
+            padding: 10px;
+            background-color: #f39c12;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+        }
     </style>
 </head>
 <body>
@@ -84,6 +96,9 @@
                 <h1>Benvenuto, {{ userName }}!</h1>
                 <p>Seleziona foto o video da caricare. Dimensione massima: 1GB per file.</p>
                 <div id="drag-drop-area"></div>
+                <div id="retry-container">
+                    <button id="retry-button">Riprova il caricamento dei file falliti</button>
+                </div>
                 {% if isTurnstileEnabled %}
                 <!-- Turnstile widget -->
                 <div id="turnstile-container" class="cf-turnstile" data-sitekey="{{ siteKey }}" data-callback="onTurnstileSuccess"></div>
@@ -148,6 +163,7 @@
             height: 400,
             note: 'Solo foto e video, fino a 1GB',
             browserBackButtonClose: true,
+            hideRetryButton: true,
             hidePauseResumeButton: true
         })
         .use(Uppy.Tus, {
@@ -180,25 +196,38 @@
 
         uppy.on('complete', (result) => {
             isUploading = false;
-            if (result.successful.length > 0 && result.failed.length === 0) {
+            
+            // Toggle retry button visibility
+            const retryContainer = document.getElementById('retry-container');
+            if (result.failed.length > 0) {
+                retryContainer.style.display = 'block';
+            } else {
+                retryContainer.style.display = 'none';
+            }
+
+            // Check if there are no failed files and some successful files
+            if (result.failed.length === 0 && result.successful.length > 0) {
                 Swal.fire({
                     title: 'Completato!',
-                    text: 'I tuoi file sono stati caricati con successo.',
+                    text: 'Tutti i file sono stati caricati con successo.',
                     icon: 'success',
                     confirmButtonText: 'Ottimo'
-                }).then(() => { uppy.cancelAll(); });
+                }).then(() => {
+                    uppy.cancelAll(); 
+                });
             } else if (result.failed.length > 0) {
-                const isTerminal = result.failed.some(f => f.error && f.error.includes('Failed to upload chunk'));
-                if (isTerminal) {
-                    Swal.fire({
-                        title: 'Errore!',
-                        text: 'Il caricamento è fallito.',
-                        icon: 'error',
-                        confirmButtonText: 'Chiudi'
-                    });
-                    uppy.cancelAll();
-                }
+                Swal.fire({
+                    title: 'Attenzione',
+                    text: `Alcuni file non sono stati caricati: ${result.failed.length} file.`,
+                    icon: 'warning',
+                    confirmButtonText: 'Chiudi'
+                });
             }
+        });
+
+        document.getElementById('retry-button').addEventListener('click', () => {
+            document.getElementById('retry-container').style.display = 'none';
+            uppy.retryAll();
         });
     </script>
     {% endif %}
