@@ -16,6 +16,7 @@ COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/src/views ./dist/views
+COPY --from=builder /app/static ./static
 
 ENV NODE_ENV=production
 EXPOSE 3000

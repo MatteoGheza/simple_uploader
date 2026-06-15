@@ -135,8 +135,8 @@ app.use(limiter);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
-app.use('/static', express.static(path.join(__dirname, '../static')));
-app.use('/favicon.ico', express.static(path.join(__dirname, '../static/favicon.ico')));
+app.use('/static', express.static(path.resolve(__dirname, '../static')));
+app.use('/favicon.ico', express.static(path.resolve(__dirname, '../static/favicon.ico')));
 
 // LiquidJS Setup
 const engine = new Liquid();
