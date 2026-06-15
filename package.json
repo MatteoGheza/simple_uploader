@@ -5,7 +5,7 @@
   "main": "src/server.ts",
   "scripts": {
     "start": "ts-node -- src/server.ts",
-    "dev": "ts-node-dev src/server.ts",
+    "dev": "ts-node-dev src/server.ts -l debug",
     "lint": "eslint src/**/*.ts"
   },
   "keywords": [],
@@ -20,6 +20,7 @@
   },
   "dependencies": {
     "@tus/server": "^2.4.1",
+    "commander": "^15.0.0",
     "cookie-parser": "^1.4.7",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
@@ -29,7 +30,8 @@
     "jsonwebtoken": "^9.0.3",
     "liquidjs": "^10.27.0",
     "node-fetch": "^2.7.0",
-    "uuid": "^14.0.0"
+    "uuid": "^14.0.0",
+    "winston": "^3.19.0"
   },
   "devDependencies": {
     "@eslint/eslintrc": "^3.3.5",

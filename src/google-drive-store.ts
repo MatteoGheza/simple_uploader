@@ -2,6 +2,7 @@ import { DataStore, Upload } from '@tus/server';
 import { google, drive_v3 } from 'googleapis';
 import { Readable } from 'node:stream';
 import fetch from 'node-fetch';
+import logger from './logger';
 import {
   GDRIVE_RESUMABLE_INCOMPLETE,
   SESSION_TTL_MS,
@@ -129,12 +130,8 @@ export class GoogleDriveStore extends DataStore {
 
     const targetFolderId = await this.getOrCreateUserFolder(userName, sessionId);
 
-    // eslint-disable-next-line no-console
-    console.log(`[GDriveStore] [${upload.id}] Initiating: ` +
-      `${fileName}`);
-    // eslint-disable-next-line no-console
-    console.debug(`[GDriveStore] [${upload.id}] ` +
-      `Size: ${fileSize} to folder: ${targetFolderId}`);
+    logger.info(`[GDriveStore] [${upload.id}] Initiating: ${fileName}`);
+    logger.debug(`[GDriveStore] [${upload.id}] Size: ${fileSize} to folder: ${targetFolderId}`);
 
     /*
      * Initiate Resumable Upload on GDrive
@@ -161,8 +158,7 @@ export class GoogleDriveStore extends DataStore {
 
     if (!response.ok) {
       const errorText = await response.text();
-      // eslint-disable-next-line no-console
-      console.error(`[GDriveStore] [${upload.id}] Init failed:`, response.status, errorText);
+      logger.error(`[GDriveStore] [${upload.id}] Init failed: ${response.status} ${errorText}`);
       throw new Error(`Failed to initiate: ${response.statusText}`);
     }
 
@@ -209,9 +205,7 @@ export class GoogleDriveStore extends DataStore {
      * or we can stream if we use the correct headers, but GDrive PUT expects a specific range.
      */
 
-    // eslint-disable-next-line no-console
-    console.debug(`[GDriveStore] [${id}] Writing ${bytesRead} bytes at ` +
-      `offset ${uploadSession.offset} (Total size: ${uploadSession.size})`);
+    logger.debug(`[GDriveStore] [${id}] Writing ${bytesRead} bytes at offset ${uploadSession.offset} (Total size: ${uploadSession.size})`);
 
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const auth = this.drive.context._options.auth as any;
@@ -231,15 +225,13 @@ export class GoogleDriveStore extends DataStore {
 
     if (response.status !== GDRIVE_RESUMABLE_INCOMPLETE && !response.ok) {
       const errorText = await response.text();
-      // eslint-disable-next-line no-console
-      console.error(`[GDriveStore] [${id}] Write failed:`, response.status, errorText);
+      logger.error(`[GDriveStore] [${id}] Write failed: ${response.status} ${errorText}`);
       this.sessions.delete(id);
       throw new Error(`Write failed: ${response.statusText} - ${errorText}`);
     }
 
     uploadSession.offset += bytesRead;
-    // eslint-disable-next-line no-console
-    console.debug(`[GDriveStore] [${id}] Chunk success. New offset: ${uploadSession.offset}`);
+    logger.debug(`[GDriveStore] [${id}] Chunk success. New offset: ${uploadSession.offset}`);
 
     // Return the new offset as required by Tus DataStore
     return uploadSession.offset;

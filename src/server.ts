@@ -1,5 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
+import { Command } from 'commander';
+import logger, { setLogLevel } from './logger';
 import { Liquid } from 'liquidjs';
 import { Server, Upload } from '@tus/server';
 import { GoogleDriveStore } from './google-drive-store';
@@ -25,6 +27,14 @@ import {
 const app = express();
 const port = config.port;
 const MINUTES_IN_HOUR = 60;
+
+const program = new Command();
+program
+  .option('-l, --level <level>', 'log level', 'info')
+  .parse(process.argv);
+
+setLogLevel(program.opts().level);
+
 const SECONDS_IN_MINUTE = 60;
 const MS_IN_SECOND = 1000;
 const TOKEN_EXPIRY_MS = MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SECOND;
@@ -203,6 +213,5 @@ app.use('/upload', (req, res) => {
 });
 
 app.listen(port, () => {
-  // eslint-disable-next-line no-console
-  console.log(`Server is running on http://localhost:${port}`);
+  logger.info(`Server is running on http://localhost:${port}`);
 });
