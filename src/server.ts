@@ -21,6 +21,8 @@ import {
   MS_PER_DAY,
   RATE_LIMIT_WINDOW_MS,
   RATE_LIMIT_MAX,
+  RATE_LIMIT_DAILY_WINDOW_MS,
+  RATE_LIMIT_DAILY_MAX,
   UPPY_MAX_FILE_SIZE
 } from './config/config';
 
@@ -124,16 +126,25 @@ const tusServer = new Server({
 });
 
 // Rate Limiting
-const limiter = rateLimit({
+const burstLimiter = rateLimit({
   windowMs: RATE_LIMIT_WINDOW_MS,
   max: RATE_LIMIT_MAX,
   standardHeaders: true,
   legacyHeaders: false,
-  message: 'Troppe richieste da questo IP, riprova tra 15 minuti'
+  message: 'Troppe richieste in un breve periodo. Riprova tra 5 minuti.'
+});
+
+const dailyLimiter = rateLimit({
+  windowMs: RATE_LIMIT_DAILY_WINDOW_MS,
+  max: RATE_LIMIT_DAILY_MAX,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: 'Limite giornaliero di richieste raggiunto. Riprova domani.'
 });
 
 // Middleware
-app.use(limiter);
+app.use(burstLimiter);
+app.use(dailyLimiter);
 app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
