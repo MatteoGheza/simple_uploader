@@ -1,0 +1,200 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="robots" content="noindex">
+    <title>Caricamento file</title>
+    <link href="https://releases.transloadit.com/uppy/v3.23.0/uppy.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+    {% if isTurnstileEnabled %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f4f7f6;
+            padding: 10px;
+        }
+        .container {
+            max-width: 650px;
+            width: 100%;
+            padding: 20px;
+            text-align: center;
+            background: white;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            box-sizing: border-box;
+        }
+        h1 { color: #333; font-size: 1.5rem; }
+        p { color: #666; margin-bottom: 20px; font-size: 1rem; }
+        .user-form {
+            display: flex;
+            flex-direction: column;
+            gap: 15px;
+            max-width: 100%;
+            margin: 0 auto;
+        }
+        .user-form input {
+            padding: 12px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-size: 1rem;
+        }
+        .user-form button {
+            padding: 12px;
+            background-color: #007bff;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+        }
+        .user-form button:hover {
+            background-color: #0056b3;
+        }
+        #turnstile-container {
+            margin: 15px 0;
+            display: flex;
+            justify-content: center;
+        }
+        @media (max-width: 480px) {
+            .container { padding: 15px; }
+            h1 { font-size: 1.25rem; }
+            p { font-size: 0.9rem; }
+            .uppy-Dashboard-inner { height: 350px !important; }
+        }
+        .uppy-Dashboard-AddFiles { cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        {% if userName %}
+            <div id="uploader-content">
+                <h1>Benvenuto, {{ userName }}!</h1>
+                <p>Seleziona foto o video da caricare. Dimensione massima: 1GB per file.</p>
+                <div id="drag-drop-area"></div>
+                {% if isTurnstileEnabled %}
+                <!-- Turnstile widget -->
+                <div id="turnstile-container" class="cf-turnstile" data-sitekey="{{ siteKey }}" data-callback="onTurnstileSuccess"></div>
+                {% endif %}
+            </div>
+        {% else %}
+            <h1>Come ti chiami?</h1>
+            <p>Inserisci il tuo Nome e Cognome per continuare.</p>
+            <form action="/set-user" method="POST" class="user-form">
+                <input type="text" name="name" placeholder="Nome e Cognome" required minlength="2">
+                <button type="submit">Continua</button>
+            </form>
+        {% endif %}
+    </div>
+
+    {% if userName %}
+    <script src="https://releases.transloadit.com/uppy/v3.23.0/uppy.min.js"></script>
+    <script src="https://releases.transloadit.com/uppy/locales/v3.3.0/it_IT.min.js"></script>
+    <script>
+        const sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        let isUploading = false;
+        let uploadToken = null;
+
+        async function onTurnstileSuccess(token) {
+            const response = await fetch('/verify-turnstile', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: new URLSearchParams({ 'cf-turnstile-response': token })
+            });
+            if (response.ok) {
+                const data = await response.json();
+                uploadToken = data.uploadToken;
+            }
+        }
+
+        window.addEventListener('beforeunload', (event) => {
+            if (isUploading) {
+                event.preventDefault();
+                event.returnValue = '';
+            }
+        });
+
+        const uppy = new Uppy.Uppy({
+            autoProceed: false,
+            locale: Uppy.locales.it_IT,
+            restrictions: {
+                maxFileSize: 1073741824,
+                allowedFileTypes: ['image/*', 'video/*']
+            },
+            meta: {
+                userName: '{{ userName }}',
+                sessionId: sessionId,
+                uploadToken: null // Will be updated
+            }
+        })
+        .use(Uppy.Dashboard, {
+            inline: true,
+            target: '#drag-drop-area',
+            showProgressDetails: true,
+            proudlyDisplayPoweredByUppy: false,
+            width: '100%',
+            height: 400,
+            note: 'Solo foto e video, fino a 1GB',
+            browserBackButtonClose: true,
+            hidePauseResumeButton: true
+        })
+        .use(Uppy.Tus, {
+            endpoint: '/upload',
+            chunkSize: 83886080,
+            retryDelays: [0, 1000]
+        });
+
+        document.addEventListener('click', (event) => {
+            const dashboard = document.querySelector('.uppy-Dashboard-AddFiles');
+            if (dashboard && dashboard.contains(event.target)) {
+                const fileInput = document.querySelector('.uppy-Dashboard-input');
+                if (fileInput) { fileInput.click(); }
+            }
+        });
+
+        uppy.on('upload', () => {
+            if ({{ isTurnstileEnabled | json }} && !uploadToken) {
+                Swal.fire({
+                    title: 'Attenzione',
+                    text: 'Completa la verifica Turnstile prima di caricare.',
+                    icon: 'warning'
+                });
+                uppy.cancelAll();
+                return;
+            }
+            uppy.setMeta({ uploadToken: uploadToken });
+            isUploading = true;
+        });
+
+        uppy.on('complete', (result) => {
+            isUploading = false;
+            if (result.successful.length > 0 && result.failed.length === 0) {
+                Swal.fire({
+                    title: 'Completato!',
+                    text: 'I tuoi file sono stati caricati con successo.',
+                    icon: 'success',
+                    confirmButtonText: 'Ottimo'
+                }).then(() => { uppy.cancelAll(); });
+            } else if (result.failed.length > 0) {
+                const isTerminal = result.failed.some(f => f.error && f.error.includes('Failed to upload chunk'));
+                if (isTerminal) {
+                    Swal.fire({
+                        title: 'Errore!',
+                        text: 'Il caricamento è fallito.',
+                        icon: 'error',
+                        confirmButtonText: 'Chiudi'
+                    });
+                    uppy.cancelAll();
+                }
+            }
+        });
+    </script>
+    {% endif %}
+</body>
+</html>
