@@ -5,6 +5,7 @@
   "main": "src/server.ts",
   "scripts": {
     "start": "ts-node -- src/server.ts",
+    "build": "tsc",
     "dev": "ts-node-dev src/server.ts -l debug",
     "lint": "eslint src/**/*.ts"
   },
