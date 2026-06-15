@@ -179,12 +179,6 @@ app.post('/verify-turnstile', async (req, res) => {
 });
 
 app.post('/set-user', (req, res) => {
-  // Simple CSRF Protection
-  const origin = req.get('origin') || req.get('referer');
-  if (origin && !origin.includes(req.get('host') || '')) {
-    return res.status(403).send('Richiesta non autorizzata');
-  }
-
   const { name } = req.body;
 
   if (!name || typeof name !== 'string' || name.trim().length < NAME_MIN_LENGTH) {
