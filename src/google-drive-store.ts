@@ -69,7 +69,7 @@ export class GoogleDriveStore extends DataStore {
     const sanitizedSession = sessionId.replace(/[^a-zA-Z0-9]/g, '');
     if (!sanitizedSession) throw new Error('Invalid session ID');
 
-    const date = new Date().toISOString().split('T')[0].replace(/-/g, '');
+    const date = new Date().toISOString().split('T')[0].replace(/-/g, '-');
     /*
      * Using sessionId to ensure all files in one "session"
      * go to the same folder

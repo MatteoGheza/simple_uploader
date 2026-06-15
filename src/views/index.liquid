@@ -118,7 +118,10 @@
     <script src="https://releases.transloadit.com/uppy/v3.23.0/uppy.min.js"></script>
     <script src="https://releases.transloadit.com/uppy/locales/v3.3.0/it_IT.min.js"></script>
     <script>
-        const sessionId = Math.random().toString(36).substring(2, 15) + Math.random().toString(36).substring(2, 15);
+        const bytes = crypto.getRandomValues(new Uint8Array(8));
+        const sessionId = Array.from(bytes, b =>
+            b.toString(16).padStart(2, '0')
+        ).join('');
         let isUploading = false;
         let uploadToken = null;
 
