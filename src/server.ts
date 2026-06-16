@@ -55,7 +55,7 @@ app.use(helmet({
         'https://releases.transloadit.com',
         'https://cdn.jsdelivr.net',
         'https://challenges.cloudflare.com',
-        'https://js-de.sentry-cdn.com'
+        'https://*.sentry-cdn.com'
       ],
       'style-src': [
         "'self'",
