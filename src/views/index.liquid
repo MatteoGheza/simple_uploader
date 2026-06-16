@@ -155,12 +155,22 @@
             }
         });
 
+        function isChromiumBasedAndroid() {
+            return (
+                /Android/i.test(navigator.userAgent) &&
+                !!window.chrome &&
+                typeof navigator.userAgentData !== "undefined"
+            );
+        }
+
+        const allowedFileTypes = isChromiumBasedAndroid() ? [] : ['image/*', 'video/*'];
+
         const uppy = new Uppy.Uppy({
             autoProceed: false,
             locale: Uppy.locales.it_IT,
             restrictions: {
                 maxFileSize: 1073741824,
-                //allowedFileTypes: ['image/*', 'video/*', '.txt']
+                allowedFileTypes
             },
             meta: {
                 userName: '{{ userName }}',
