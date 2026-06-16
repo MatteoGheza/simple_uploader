@@ -98,6 +98,11 @@
             border-radius: 4px;
             cursor: pointer;
         }
+        #turnstile-status-message {
+            display:none;
+            color:red;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -107,6 +112,7 @@
                 <h1>Benvenuto, {{ userName }}!</h1>
                 <p>Seleziona foto o video da caricare. Dimensione massima: 1GB per file.</p>
                 <div id="drag-drop-area"></div>
+                <div id="turnstile-status-message">Devi attendere che siano finiti i controlli di sicurezza.</div>
                 <div id="retry-container">
                     <button id="retry-button">Riprova il caricamento dei file falliti</button>
                 </div>
@@ -145,6 +151,7 @@
             if (response.ok) {
                 const data = await response.json();
                 uploadToken = data.uploadToken;
+                document.getElementById('turnstile-status-message').style.display = 'none';
             }
         }
 
@@ -206,14 +213,11 @@
 
         uppy.on('upload', () => {
             if ({{ isTurnstileEnabled | json }} && !uploadToken) {
-                Swal.fire({
-                    title: 'Attenzione',
-                    text: 'Completa la verifica Turnstile prima di caricare.',
-                    icon: 'warning'
-                });
-                uppy.cancelAll();
+                document.getElementById('turnstile-status-message').style.display = 'block';
+                console.warn('Upload blocked: Turnstile verification required.');
                 return;
             }
+            document.getElementById('turnstile-status-message').style.display = 'none';
             uppy.setMeta({ uploadToken: uploadToken });
             isUploading = true;
         });
