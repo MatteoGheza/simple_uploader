@@ -48,7 +48,7 @@ app.set('trust proxy', config.trustProxy);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      ...helmet.contentSecurityPolicy.getDefaultDirectives(),
+      upgradeInsecureRequests: null,
       'script-src': [
         "'self'",
         "'unsafe-inline'",
@@ -75,7 +75,8 @@ app.use(helmet({
       'img-src': ["'self'", 'data:', 'blob:'],
       'default-src': ["'self'"]
     }
-  }
+  },
+  hsts: config.nodeEnv === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false
 }));
 
 // Google Drive Auth
@@ -227,6 +228,6 @@ app.use('/upload', (req, res) => {
   tusServer.handle(req, res);
 });
 
-app.listen(port, () => {
-  logger.info(`Server is running on http://localhost:${port}`);
+app.listen(port, '0.0.0.0', () => {
+  logger.info(`Server is running on http://127.0.0.1:${port}`);
 });
