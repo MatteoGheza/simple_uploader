@@ -106,6 +106,31 @@
             color:red;
             margin-bottom: 10px;
         }
+        #upload-action-container {
+            margin-top: 15px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 5px;
+        }
+        #custom-upload-button {
+            padding: 12px 24px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 1rem;
+            width: 100%;
+        }
+        #custom-upload-button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #upload-feedback {
+            color: #666;
+            font-size: 0.9rem;
+        }
     </style>
 </head>
 <body>
@@ -116,6 +141,10 @@
                 <p id="description">Seleziona foto o video da caricare.<br>Dimensione massima: 1GB per file.<br>Premi sul riquadro seguente per caricare i file.</p>
                 <div id="drag-drop-area"></div>
                 <div id="turnstile-status-message">Devi attendere che siano finiti i controlli di sicurezza.</div>
+                <div id="upload-action-container">
+                    <button id="custom-upload-button" disabled>Carica file</button>
+                    <div id="upload-feedback">Attendi il controllo di sicurezza per poter caricare.</div>
+                </div>
                 <div id="retry-container">
                     <button id="retry-button">Riprova il caricamento dei file falliti</button>
                 </div>
@@ -145,6 +174,16 @@
         let isUploading = false;
         let uploadToken = null;
 
+        const isTurnstileEnabled = {{ isTurnstileEnabled | json }};
+        const customUploadButton = document.getElementById('custom-upload-button');
+        const uploadFeedback = document.getElementById('upload-feedback');
+
+        // Initialize button state
+        if (!isTurnstileEnabled) {
+            customUploadButton.disabled = false;
+            uploadFeedback.style.display = 'none';
+        }
+
         async function onTurnstileSuccess(token) {
             const response = await fetch('/verify-turnstile', {
                 method: 'POST',
@@ -155,6 +194,10 @@
                 const data = await response.json();
                 uploadToken = data.uploadToken;
                 document.getElementById('turnstile-status-message').style.display = 'none';
+                
+                // Enable custom upload button
+                customUploadButton.disabled = false;
+                uploadFeedback.textContent = 'Ora puoi procedere con il caricamento.';
             }
         }
 
@@ -198,12 +241,18 @@
             note: 'Solo foto e video, fino a 1GB',
             browserBackButtonClose: true,
             hideRetryButton: true,
-            hidePauseResumeButton: true
+            hidePauseResumeButton: true,
+            hideUploadButton: true
         })
         .use(Uppy.Tus, {
             endpoint: '/upload',
             chunkSize: 83886080,
             retryDelays: [0, 1000]
+        });
+
+        // Trigger upload on custom button click
+        customUploadButton.addEventListener('click', () => {
+            uppy.upload();
         });
 
         document.addEventListener('click', (event) => {
@@ -215,7 +264,7 @@
         });
 
         uppy.on('upload', () => {
-            if ({{ isTurnstileEnabled | json }} && !uploadToken) {
+            if (isTurnstileEnabled && !uploadToken) {
                 document.getElementById('turnstile-status-message').style.display = 'block';
                 console.warn('Upload blocked: Turnstile verification required.');
                 return;
