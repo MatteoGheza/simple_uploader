@@ -41,6 +41,8 @@ const SECONDS_IN_MINUTE = 60;
 const MS_IN_SECOND = 1000;
 const TOKEN_EXPIRY_MS = MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SECOND;
 
+const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+
 // Security: Trust Proxy for accurate rate limiting
 app.set('trust proxy', config.trustProxy);
 
@@ -48,7 +50,7 @@ app.set('trust proxy', config.trustProxy);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      upgradeInsecureRequests: null,
+      upgradeInsecureRequests: IS_PRODUCTION ? [] : null,
       'script-src': [
         "'self'",
         "'unsafe-inline'",
@@ -76,7 +78,7 @@ app.use(helmet({
       'default-src': ["'self'"]
     }
   },
-  hsts: config.nodeEnv === 'production' ? { maxAge: 31536000, includeSubDomains: true } : false
+  hsts: IS_PRODUCTION ? { maxAge: 31536000, includeSubDomains: true } : false
 }));
 
 // Google Drive Auth
@@ -170,7 +172,7 @@ app.get('/', (req, res) => {
     userName,
     siteKey: process.env.CF_TURNSTILE_SITE_KEY,
     isTurnstileEnabled: process.env.DISABLE_TURNSTILE !== 'true',
-    isProd: process.env.NODE_ENV === 'production'
+    isProd: IS_PRODUCTION
   });
 });
 
@@ -214,7 +216,7 @@ app.post('/set-user', (req, res) => {
     maxAge: COOKIE_MAX_AGE_DAYS * MS_PER_DAY,
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production'
+    secure: IS_PRODUCTION
   });
 
   res.redirect('/');
