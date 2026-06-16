@@ -170,7 +170,7 @@
             );
         }
 
-        const allowedFileTypes = isChromiumBasedAndroid() ? [] : ['image/*', 'video/*'];
+        const allowedFileTypes = isChromiumBasedAndroid() ? undefined : ['image/*', 'video/*'];
 
         const uppy = new Uppy.Uppy({
             autoProceed: false,
