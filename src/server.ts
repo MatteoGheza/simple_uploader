@@ -57,6 +57,7 @@ app.use(helmet({
         'https://challenges.cloudflare.com',
         'https://*.sentry-cdn.com'
       ],
+      'worker-src': ["'self'", 'blob:'],
       'style-src': [
         "'self'",
         "'unsafe-inline'",
@@ -67,7 +68,8 @@ app.use(helmet({
         'https://www.googleapis.com',
         'https://challenges.cloudflare.com',
         'https://releases.transloadit.com',
-        'https://*.ingest.sentry.io'
+        'https://*.ingest.sentry.io',
+        'https://*.sentry-cdn.com'
       ],
       'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
       'img-src': ["'self'", 'data:', 'blob:'],
