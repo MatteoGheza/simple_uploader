@@ -54,7 +54,8 @@ app.use(helmet({
         "'unsafe-inline'",
         'https://releases.transloadit.com',
         'https://cdn.jsdelivr.net',
-        'https://challenges.cloudflare.com'
+        'https://challenges.cloudflare.com',
+        'https://js-de.sentry-cdn.com'
       ],
       'style-src': [
         "'self'",
@@ -65,10 +66,12 @@ app.use(helmet({
         "'self'",
         'https://www.googleapis.com',
         'https://challenges.cloudflare.com',
-        'https://releases.transloadit.com'
+        'https://releases.transloadit.com',
+        'https://*.ingest.sentry.io'
       ],
       'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
-      'img-src': ["'self'", 'data:', 'blob:']
+      'img-src': ["'self'", 'data:', 'blob:'],
+      'default-src': ["'self'"]
     }
   }
 }));
@@ -163,7 +166,8 @@ app.get('/', (req, res) => {
   res.render('index', {
     userName,
     siteKey: process.env.CF_TURNSTILE_SITE_KEY,
-    isTurnstileEnabled: process.env.DISABLE_TURNSTILE !== 'true'
+    isTurnstileEnabled: process.env.DISABLE_TURNSTILE !== 'true',
+    isProd: process.env.NODE_ENV === 'production'
   });
 });
 

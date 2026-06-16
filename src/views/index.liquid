@@ -12,6 +12,17 @@
     <link rel="apple-touch-icon" sizes="180x180" href="/static/apple-touch-icon.png?v=20260615" />
     <meta name="apple-mobile-web-app-title" content="Caricamento File" />
     <link rel="manifest" href="/static/site.webmanifest?v=20260615" />
+    {% if isProd %}
+    <script src="https://js-de.sentry-cdn.com/292595be9ace494a9faf16dacdec6dc4.min.js" crossorigin="anonymous"></script>
+    <script>
+    Sentry.onLoad(function() {
+        Sentry.init({
+            replaysSessionSampleRate: 0.1,
+            replaysOnErrorSampleRate: 1.0
+        });
+    });
+    </script>
+    {% endif %}
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     {% if isTurnstileEnabled %}<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>{% endif %}
     <style>
