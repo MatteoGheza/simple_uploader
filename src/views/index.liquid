@@ -98,6 +98,9 @@
             border-radius: 4px;
             cursor: pointer;
         }
+        #description {
+            text-align: left;
+        }
         #turnstile-status-message {
             display:none;
             color:red;
@@ -109,8 +112,8 @@
     <div class="container">
         {% if userName %}
             <div id="uploader-content">
-                <h1>Benvenuto, {{ userName }}!</h1>
-                <p>Seleziona foto o video da caricare. Dimensione massima: 1GB per file. Premi sul riquadro seguente per selezionare i file da caricare.</p>
+                <h1>Ciao, {{ userName }}</h1>
+                <p id="description">Seleziona foto o video da caricare.<br>Dimensione massima: 1GB per file.<br>Premi sul riquadro seguente per caricare i file.</p>
                 <div id="drag-drop-area"></div>
                 <div id="turnstile-status-message">Devi attendere che siano finiti i controlli di sicurezza.</div>
                 <div id="retry-container">
