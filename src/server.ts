@@ -50,7 +50,7 @@ app.set('trust proxy', config.trustProxy);
 app.use(helmet({
   contentSecurityPolicy: {
     directives: {
-      upgradeInsecureRequests: IS_PRODUCTION ? [] : null,
+      "upgrade-insecure-requests": IS_PRODUCTION ? [] : null,
       'script-src': [
         "'self'",
         "'unsafe-inline'",
