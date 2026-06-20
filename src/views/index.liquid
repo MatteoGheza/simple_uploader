@@ -142,7 +142,7 @@
                 <div id="drag-drop-area"></div>
                 <div id="turnstile-status-message">Devi attendere che siano finiti i controlli di sicurezza.</div>
                 <div id="upload-action-container">
-                    <button id="custom-upload-button" disabled>Carica file</button>
+                    <button id="custom-upload-button" class="no-file-selected">Premi per selezionare i file</button>
                     <div id="upload-feedback">Attendi il controllo di sicurezza per poter caricare.</div>
                 </div>
                 <div id="retry-container">
@@ -180,7 +180,6 @@
 
         // Initialize button state
         if (!isTurnstileEnabled) {
-            customUploadButton.disabled = false;
             uploadFeedback.style.display = 'none';
         }
 
@@ -194,10 +193,9 @@
                 const data = await response.json();
                 uploadToken = data.uploadToken;
                 document.getElementById('turnstile-status-message').style.display = 'none';
-                
-                // Enable custom upload button
-                customUploadButton.disabled = false;
+
                 uploadFeedback.textContent = 'Ora puoi procedere con il caricamento.';
+                customUploadButton.disabled = false;
             }
         }
 
@@ -252,6 +250,15 @@
 
         // Trigger upload on custom button click
         customUploadButton.addEventListener('click', () => {
+            if (customUploadButton.classList.contains('no-file-selected')) {
+                const dashboard = document.querySelector('.uppy-Dashboard-AddFiles');
+                if (dashboard) {
+                    const fileInput = document.querySelector('.uppy-Dashboard-input');
+                    if (fileInput) { fileInput.click(); }
+                }
+                return;
+            }
+            customUploadButton.disabled = true;
             uppy.upload();
         });
 
@@ -261,6 +268,36 @@
                 const fileInput = document.querySelector('.uppy-Dashboard-input');
                 if (fileInput) { fileInput.click(); }
             }
+        });
+
+        uppy.on('files-added', () => {
+            customUploadButton.classList.remove('no-file-selected');
+            customUploadButton.textContent = 'Carica file';
+            if (isTurnstileEnabled && !uploadToken) {
+                customUploadButton.disabled = true;
+            } else {
+                customUploadButton.disabled = false;
+            }
+        });
+
+        uppy.on('file-removed', () => {
+            if (uppy.getFiles().length === 0) {
+                console.log('Nessun file selezionato, reset del pulsante di caricamento.');
+                customUploadButton.classList.add('no-file-selected');
+                customUploadButton.textContent = 'Premi per selezionare i file';
+                customUploadButton.disabled = false;
+            }
+        });
+
+        uppy.on('cancel-all', () => {
+            console.log('Caricamento annullato, reset del pulsante di caricamento.');
+            customUploadButton.classList.add('no-file-selected');
+            customUploadButton.textContent = 'Premi per selezionare i file';
+            customUploadButton.disabled = false;
+        });
+
+        uppy.on('upload-error', () => {
+            isUploading = false;
         });
 
         uppy.on('upload', () => {
@@ -276,6 +313,7 @@
 
         uppy.on('complete', (result) => {
             isUploading = false;
+            customUploadButton.disabled = false;
             
             // Toggle retry button visibility
             const retryContainer = document.getElementById('retry-container');
@@ -293,7 +331,7 @@
                     icon: 'success',
                     confirmButtonText: 'Ottimo'
                 }).then(() => {
-                    uppy.cancelAll(); 
+                    uppy.cancelAll();
                 });
             } else if (result.failed.length > 0) {
                 Swal.fire({
