@@ -70,7 +70,7 @@ app.use(helmet({
         'https://www.googleapis.com',
         'https://challenges.cloudflare.com',
         'https://releases.transloadit.com',
-        'https://*.ingest.sentry.io',
+        'https://*.sentry.io',
         'https://*.sentry-cdn.com'
       ],
       'frame-src': ["'self'", 'https://challenges.cloudflare.com'],
