@@ -13,12 +13,18 @@
     <meta name="apple-mobile-web-app-title" content="Caricamento File" />
     <link rel="manifest" href="/static/site.webmanifest?v=20260615" />
     {% if isProd %}
-    <script src="https://js-de.sentry-cdn.com/292595be9ace494a9faf16dacdec6dc4.min.js" crossorigin="anonymous"></script>
+    <script src="{{ sentryJS }}" crossorigin="anonymous"></script>
     <script>
     Sentry.onLoad(function() {
         Sentry.init({
             replaysSessionSampleRate: 0.1,
-            replaysOnErrorSampleRate: 1.0
+            replaysOnErrorSampleRate: 1.0,
+            integrations: [
+                Sentry.replayIntegration({
+                    maskAllText: false,
+                    maskAllInputs: false
+                })
+            ],
         });
     });
     </script>

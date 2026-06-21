@@ -7,6 +7,8 @@ interface Config {
   nodeEnv: string;
   trustProxy: number;
   jwtSecret: string;
+  sentryJSFrontend: string;
+  sentryDSNBackend: string;
 }
 
 const DEFAULT_PORT = 3000;
@@ -15,7 +17,9 @@ export const config: Config = {
   port: Number(process.env.PORT) || DEFAULT_PORT,
   nodeEnv: process.env.NODE_ENV || 'development',
   trustProxy: Number(process.env.TRUST_PROXY) || 0,
-  jwtSecret: process.env.JWT_SECRET || 'super-secret-key-change-me'
+  jwtSecret: process.env.JWT_SECRET || 'super-secret-key-change-me',
+  sentryJSFrontend: process.env.SENTRY_JS_FRONTEND || '',
+  sentryDSNBackend: process.env.SENTRY_DSN_BACKEND || ''
 };
 
 // User Validation Constants

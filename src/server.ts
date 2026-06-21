@@ -13,6 +13,8 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
+import * as Sentry from "@sentry/node"
+
 import {
   config,
   NAME_MIN_LENGTH,
@@ -26,7 +28,13 @@ import {
   UPPY_MAX_FILE_SIZE
 } from './config/config';
 
+Sentry.init({
+  dsn: config.sentryDSNBackend,
+  environment: config.nodeEnv
+});
+
 const app = express();
+
 const port = config.port;
 const MINUTES_IN_HOUR = 60;
 
@@ -41,7 +49,7 @@ const SECONDS_IN_MINUTE = 60;
 const MS_IN_SECOND = 1000;
 const TOKEN_EXPIRY_MS = MINUTES_IN_HOUR * SECONDS_IN_MINUTE * MS_IN_SECOND;
 
-const IS_PRODUCTION = process.env.NODE_ENV === 'production';
+const IS_PRODUCTION = config.nodeEnv === 'production';
 
 // Security: Trust Proxy for accurate rate limiting
 app.set('trust proxy', config.trustProxy);
@@ -172,11 +180,16 @@ app.get('/', (req, res) => {
     userName,
     siteKey: process.env.CF_TURNSTILE_SITE_KEY,
     isTurnstileEnabled: process.env.DISABLE_TURNSTILE !== 'true',
-    isProd: IS_PRODUCTION
+    isProd: IS_PRODUCTION,
+    sentryJS: config.sentryJSFrontend
   });
 });
 
 app.post('/verify-turnstile', async (req, res) => {
+  if (!req.body || !req.body.includes('cf-turnstile-response')) {
+    return res.status(400).send('Token Turnstile mancante');
+  }
+
   const token = req.body['cf-turnstile-response'];
   const ip = req.ip;
 
@@ -229,6 +242,8 @@ app.post('/set-user', (req, res) => {
 app.use('/upload', (req, res) => {
   tusServer.handle(req, res);
 });
+
+Sentry.setupExpressErrorHandler(app);
 
 app.listen(port, '0.0.0.0', () => {
   logger.info(`Server is running on http://127.0.0.1:${port}`);
