@@ -67,4 +67,9 @@ export const CLEANUP_INTERVAL_MS = CLEANUP_MINUTES * SECONDS_PER_MINUTE * MS_PER
 const MAX_CHUNK_MB = 100;
 export const MAX_CHUNK_BUFFER_SIZE = MAX_CHUNK_MB * KB_PER_MB * BYTES_PER_KB;
 
+// Turnstile Constants
+export const TURNSTILE_TIMEOUT_MS = 2000;
+export const TURNSTILE_RETRIES = 2;
+export const TURNSTILE_RETRY_DELAY_MS = 1000;
+
 export default config;

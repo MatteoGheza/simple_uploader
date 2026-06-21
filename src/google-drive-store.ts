@@ -1,7 +1,6 @@
 import { DataStore, Upload } from '@tus/server';
 import { google, drive_v3 } from 'googleapis';
 import { Readable } from 'node:stream';
-import fetch from 'node-fetch';
 import logger from './logger';
 import {
   GDRIVE_RESUMABLE_INCOMPLETE,

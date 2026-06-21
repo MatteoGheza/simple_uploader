@@ -11,7 +11,6 @@ import path from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
-import fetch from 'node-fetch';
 import jwt from 'jsonwebtoken';
 import * as Sentry from "@sentry/node"
 
@@ -25,7 +24,10 @@ import {
   RATE_LIMIT_MAX,
   RATE_LIMIT_DAILY_WINDOW_MS,
   RATE_LIMIT_DAILY_MAX,
-  UPPY_MAX_FILE_SIZE
+  UPPY_MAX_FILE_SIZE,
+  TURNSTILE_TIMEOUT_MS,
+  TURNSTILE_RETRY_DELAY_MS,
+  TURNSTILE_RETRIES
 } from './config/config';
 
 Sentry.init({
@@ -185,6 +187,33 @@ app.get('/', (req, res) => {
   });
 });
 
+async function verifyTurnstile(
+  formData: URLSearchParams,
+  retries = TURNSTILE_RETRIES
+): Promise<TurnstileOutcome> {
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    try {
+      const result = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+        method: 'POST',
+        body: formData,
+        headers: { 'Accept-Encoding': 'identity' },
+        signal: AbortSignal.timeout(TURNSTILE_TIMEOUT_MS)
+      });
+
+      if (!result.ok) {
+        throw new Error(`Turnstile HTTP ${result.status}`);
+      }
+
+      return (await result.json()) as TurnstileOutcome;
+    } catch (err) {
+      if (attempt === retries) throw err;
+      await new Promise((r) => setTimeout(r, TURNSTILE_RETRY_DELAY_MS * (attempt + 1)));
+    }
+  }
+
+  throw new Error('unreachable');
+}
+
 app.post('/verify-turnstile', async (req, res) => {
   if (!req.body || !req.body['cf-turnstile-response']) {
     return res.status(400).send('Token Turnstile mancante');
@@ -198,19 +227,24 @@ app.post('/verify-turnstile', async (req, res) => {
   formData.append('response', token);
   formData.append('remoteip', ip || '');
 
-  const result = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
-    method: 'POST',
-    body: formData
-  });
-  const outcome = (await result.json()) as TurnstileOutcome;
+  try {
+    const outcome = await verifyTurnstile(formData);
 
-  if (!outcome.success) {
-    return res.status(403).send('Verifica Turnstile fallita');
+    if (!outcome.success) {
+      return res.status(403).send('Verifica Turnstile fallita');
+    }
+
+    const uploadToken = jwt.sign({ sub: 'user' }, config.jwtSecret, {
+      expiresIn: TOKEN_EXPIRY_MS / 1000
+    });
+    res.json({ uploadToken });
+  } catch (err) {
+    // eslint-disable-next-line no-console
+    console.error(err);
+    logger.error('Turnstile verification error:', err);
+    Sentry.captureException(err);
+    return res.status(502).send('Errore di verifica, riprova più tardi');
   }
-
-  // Issue upload token
-  const uploadToken = jwt.sign({ sub: 'user' }, config.jwtSecret, { expiresIn: TOKEN_EXPIRY_MS / 1000 });
-  res.json({ uploadToken });
 });
 
 app.post('/set-user', (req, res) => {
