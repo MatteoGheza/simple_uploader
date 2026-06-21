@@ -186,7 +186,7 @@ app.get('/', (req, res) => {
 });
 
 app.post('/verify-turnstile', async (req, res) => {
-  if (!req.body || !req.body.includes('cf-turnstile-response')) {
+  if (!req.body || !req.body['cf-turnstile-response']) {
     return res.status(400).send('Token Turnstile mancante');
   }
 
